@@ -40,6 +40,7 @@
 #include <time.h>
 #include "DecApp.h"
 #include "program_options_lite.h"
+#include "CommonLib/DecMVsLogger.h"
 
 //! \ingroup DecoderApp
 //! \{
@@ -51,6 +52,8 @@
 int main(int argc, char* argv[])
 {
   int returnCode = EXIT_SUCCESS;
+
+  DecMVsLogger::init();
 
   // print information
   fprintf( stdout, "\n" );
@@ -115,6 +118,8 @@ int main(int argc, char* argv[])
   printf("\n Total Time: %12.3f sec.\n", dResult);
 
   delete pcDecApp;
+
+  DecMVsLogger::close();
 
   return returnCode;
 }
