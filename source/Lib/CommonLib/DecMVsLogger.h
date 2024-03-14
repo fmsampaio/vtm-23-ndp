@@ -28,4 +28,6 @@ class DecMVsLogger {
             int yMV         
         );
 
+        static int extractIntegAndFrac(int *xCoord, int *yCoord);
+
 };
