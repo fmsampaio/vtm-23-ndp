@@ -1,6 +1,9 @@
 #include <cstdio>
 #include <string>
 
+using PosType  = int32_t;
+using SizeType = uint32_t;
+
 class DecodeOptimizer {
     private:
         static FILE* mvsFile;
