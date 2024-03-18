@@ -103,6 +103,8 @@ protected:
   int           m_gdrPocRandomAccess;                   ///<
 #endif // GDR_LEAK_TEST
 public:
+  std::string mvsFileName;
+
   DecAppCfg();
   virtual ~DecAppCfg();
 

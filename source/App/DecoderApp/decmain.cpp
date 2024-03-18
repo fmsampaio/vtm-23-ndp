@@ -41,6 +41,8 @@
 #include "DecApp.h"
 #include "program_options_lite.h"
 
+#include "CommonLib/DecodeOptimizer.h"
+
 //! \ingroup DecoderApp
 //! \{
 
@@ -81,6 +83,8 @@ int main(int argc, char* argv[])
 
     return returnCode;
   }
+
+  DecodeOptimizer::openMvsFile("/home/felipe/Projetos/ndp-repos/outputs/mvlogs/vectors.log");
 
   // starting time
   double dResult;
