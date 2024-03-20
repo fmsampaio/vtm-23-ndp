@@ -44,6 +44,8 @@
 #include <memory.h>
 #include <algorithm>
 
+#include "DecodeOptimizer.h"
+
 //! \ingroup CommonLib
 //! \{
 
@@ -1405,6 +1407,41 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
   // makes the code follow different paths if chroma is on or off (in the encoder).
   // Therefore for 4:0:0, "chroma" is not changed to false.
   CHECK(predBufWOBIO && pu.ciipFlag, "the case should not happen!");
+
+  if(!pu.cu->affine) {
+    int currFramePoc = pu.cu->slice->getPOC();
+    PosType xPU = pu.lx(); 
+    PosType yPU = pu.ly();
+
+    if(pu.refIdx[REF_PIC_LIST_0] >= 0) {
+      int refList = 0;
+      int refFramePoc = pu.cu->slice->getRefPic( REF_PIC_LIST_0, pu.refIdx[REF_PIC_LIST_0] )->getPOC();
+      int xMV = pu.mv[REF_PIC_LIST_0].getHor();
+      int yMV = pu.mv[REF_PIC_LIST_0].getVer();
+
+      MvLogData* mvData = DecodeOptimizer::getMvData(currFramePoc, xPU, yPU, refList, refFramePoc);
+      CHECK_NULLPTR(mvData);
+
+      std::pair<int,int> logMV = DecodeOptimizer::restoreMv(mvData->xMV, mvData->yMV, mvData->fracPosition);
+      CHECK(xMV != logMV.first, "[DecOpt] Motion vectors x coordinates are different.");
+      CHECK(yMV != logMV.second, "[DecOpt] Motion vectors y coordinates are different.");     
+
+    }
+    if(pu.refIdx[REF_PIC_LIST_1] >= 0) {
+      int refList = 1;
+      int refFramePoc = pu.cu->slice->getRefPic( REF_PIC_LIST_1, pu.refIdx[REF_PIC_LIST_1] )->getPOC();
+      int xMV = pu.mv[REF_PIC_LIST_1].getHor();
+      int yMV = pu.mv[REF_PIC_LIST_1].getVer();
+
+      MvLogData* mvData = DecodeOptimizer::getMvData(currFramePoc, xPU, yPU, refList, refFramePoc);
+      CHECK_NULLPTR(mvData);
+
+      std::pair<int,int> logMV = DecodeOptimizer::restoreMv(mvData->xMV, mvData->yMV, mvData->fracPosition);
+      CHECK(xMV != logMV.first, "[DecOpt] Motion vectors x coordinates are different.");
+      CHECK(yMV != logMV.second, "[DecOpt] Motion vectors y coordinates are different.");  
+    }
+  }
+
 
   if (!pu.cs->pcv->isEncoder)
   {

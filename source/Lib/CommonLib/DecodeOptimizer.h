@@ -27,5 +27,7 @@ class DecodeOptimizer {
 
     public:
         static void openMvsFile(std::string fileName);
-
+        static std::string generateMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
+        static MvLogData* getMvData(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
+        static std::pair<int, int> restoreMv(int xMV, int yMV, int fracPosition);
 };
