@@ -142,10 +142,10 @@ void DecodeOptimizer::modifyMV(int currFramePoc, PosType yPU, int refList, int* 
     int xMask = prefFracResult.first >> 2;
     int yMask = prefFracResult.first & 0x3;
 
-    printf("[%d] (%d,%d) -> ",prefFracResult.first , *xMV, *yMV);
+    //printf("[%d] (%d,%d) -> ",prefFracResult.first , *xMV, *yMV);
 
     (*xMV) = ((*xMV) & 0xFFFFFFFC) | xMask;
     (*yMV) = ((*yMV) & 0xFFFFFFFC) | yMask;
 
-    printf("(%d,%d)\n", *xMV, *yMV);    
+    //printf("(%d,%d)\n", *xMV, *yMV);    
 }
