@@ -35,4 +35,5 @@ class DecodeOptimizer {
         static MvLogData* getMvData(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
         static std::pair<int, int> restoreMv(int xMV, int yMV, int fracPosition);
         static std::pair<int, double> calculatePrefFrac(std::list<MvLogData*> list);
+        static void modifyMV(int currFramePoc, PosType yPU, int refList, int* xMV, int* yMV);
 };

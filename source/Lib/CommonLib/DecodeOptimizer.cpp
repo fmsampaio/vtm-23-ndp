@@ -94,7 +94,7 @@ std::pair<int, int> DecodeOptimizer::restoreMv(int xMV, int yMV, int fracPositio
     int yMask = fracPosition & 0x3;
 
     int xCoord = (xMV << 2) | xMask;
-    int yCoord = yMV << 2 | yMask;
+    int yCoord = (yMV << 2) | yMask;
 
     return std::pair<int,int>(xCoord, yCoord);
 }
@@ -132,3 +132,20 @@ std::pair<int, double> DecodeOptimizer::calculatePrefFrac(std::list<MvLogData*> 
     }
 }
 
+void DecodeOptimizer::modifyMV(int currFramePoc, PosType yPU, int refList, int* xMV, int* yMV) {
+    std::string ctuWindowKey = generateKeyPerCTUWindow(currFramePoc, yPU, refList);
+    std::pair<int, double> prefFracResult = prefFracMap.at(ctuWindowKey);
+
+    if(prefFracResult.first == -1)
+        return;
+
+    int xMask = prefFracResult.first >> 2;
+    int yMask = prefFracResult.first & 0x3;
+
+    printf("[%d] (%d,%d) -> ",prefFracResult.first , *xMV, *yMV);
+
+    (*xMV) = ((*xMV) & 0xFFFFFFFC) | xMask;
+    (*yMV) = ((*yMV) & 0xFFFFFFFC) | yMask;
+
+    printf("(%d,%d)\n", *xMV, *yMV);    
+}
