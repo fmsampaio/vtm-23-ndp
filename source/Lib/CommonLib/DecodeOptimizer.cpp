@@ -3,6 +3,7 @@
 FILE* DecodeOptimizer::mvsFile;
 std::map<std::string, MvLogData*> DecodeOptimizer::mvsDataMap;
 std::map<std::string, std::list<MvLogData*> > DecodeOptimizer::mvsDataMapPerCTUWindow;
+std::map<std::string, std::pair<int, double> > DecodeOptimizer::prefFracMap;
 
 std::string DecodeOptimizer::generateMvLogMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc) {
     std::string key = std::to_string(currFramePoc) + "_" +
@@ -68,16 +69,12 @@ void DecodeOptimizer::openMvsFile(std::string fileName) {
             list.push_back(mvData);
             mvsDataMapPerCTUWindow.insert({keyPerWindow, list});
         }
-
     }
 
-    for(auto it = mvsDataMapPerCTUWindow.begin(); it != mvsDataMapPerCTUWindow.end(); it ++) {
-        printf("CTU Window (%s) - %lu\n", it->first.c_str(), it->second.size());
-    }
-
-
-    printf("MV data: %lu\n", mvsDataMap.size());
-   
+    for(auto it = mvsDataMapPerCTUWindow.begin(); it != mvsDataMapPerCTUWindow.end(); ++it) {
+        std::pair<int, double> result = calculatePrefFrac(it->second);
+        prefFracMap.insert({it->first, result});
+    }   
 }
 
 MvLogData* DecodeOptimizer::getMvData(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc) {
@@ -100,7 +97,38 @@ std::pair<int, int> DecodeOptimizer::restoreMv(int xMV, int yMV, int fracPositio
     int yCoord = yMV << 2 | yMask;
 
     return std::pair<int,int>(xCoord, yCoord);
-
-    
-
 }
+
+std::pair<int, double> DecodeOptimizer::calculatePrefFrac(std::list<MvLogData*> list) {
+    int countFracPos[16];
+
+    for (int i = 0; i < 16; i++) {
+        countFracPos[i] = 0;
+    }
+    
+   
+    for(std::list<MvLogData*>::iterator it = list.begin(); it != list.end(); ++ it) {
+        countFracPos[(*it)->fracPosition] ++;
+    }
+ 
+    int countFracs = 0;
+    int prefFrac = -1;
+    int maxOcc = -1;
+
+    for (int frac = 1; frac < 16; frac++) {
+        countFracs += countFracPos[frac];
+        if(countFracPos[frac] > maxOcc) {
+            maxOcc = countFracPos[frac];
+            prefFrac = frac;
+        }
+    }
+
+    if(countFracs != 0) {
+        double percentFrac = (maxOcc * 1.0) / countFracs;
+        return std::pair<int, double>(prefFrac, percentFrac);
+    }
+    else {
+        return std::pair<int, double>(-1, -1);
+    }
+}
+
