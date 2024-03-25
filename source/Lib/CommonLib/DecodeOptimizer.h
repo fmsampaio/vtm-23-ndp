@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <string>
 #include <map>
+#include <list>
 #include <iostream>
 
 using PosType  = int32_t;
@@ -24,10 +25,12 @@ class DecodeOptimizer {
     private:
         static FILE* mvsFile;
         static std::map<std::string, MvLogData*> mvsDataMap;
+        static std::map<std::string, std::list<MvLogData*> > mvsDataMapPerCTUWindow;
 
     public:
         static void openMvsFile(std::string fileName);
-        static std::string generateMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
+        static std::string generateMvLogMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
+        static std::string generateKeyPerCTUWindow(int currFramePoc, PosType yPU, int refList);
         static MvLogData* getMvData(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
         static std::pair<int, int> restoreMv(int xMV, int yMV, int fracPosition);
 };
