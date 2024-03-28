@@ -5,6 +5,7 @@ std::map<std::string, MvLogData*> DecodeOptimizer::mvsDataMap;
 std::map<std::string, std::list<MvLogData*> > DecodeOptimizer::mvsDataMapPerCTUWindow;
 std::map<std::string, std::pair<int, double> > DecodeOptimizer::prefFracMap;
 std::map<std::string, std::pair<int, double> > DecodeOptimizer::avgMvMap;
+long long int DecodeOptimizer::countAdjustedMVs, DecodeOptimizer::totalDecodedMVs;
 
 std::string DecodeOptimizer::generateMvLogMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc) {
     std::string key = std::to_string(currFramePoc) + "_" +
@@ -29,6 +30,9 @@ std::string DecodeOptimizer::generateKeyPerCTUWindow(int currFramePoc, PosType y
 void DecodeOptimizer::openMvsFile(std::string fileName) {
     mvsFile = fopen(fileName.c_str(), "r");
     optLogFile = fopen("decoder-opt.log", "w");
+
+    countAdjustedMVs = 0;
+    totalDecodedMVs = 0;
 
     int currFramePoc;
     PosType xPU;
@@ -189,20 +193,60 @@ std::pair<int, double> DecodeOptimizer::calculateAvgMV(std::list<MvLogData*> lis
 
 }
 
-void DecodeOptimizer::modifyMV(int currFramePoc, PosType yPU, int refList, int* xMV, int* yMV) {
+void DecodeOptimizer::modifyMV(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc, int* xMV, int* yMV) {
+    MvLogData *mvData = getMvData(currFramePoc, xPU, yPU, refList, refFramePoc);
+
     std::string ctuWindowKey = generateKeyPerCTUWindow(currFramePoc, yPU, refList);
     std::pair<int, double> prefFracResult = prefFracMap.at(ctuWindowKey); //TODO protect this .at access at prefFracMap
 
+    std::pair<int, double> avgMVResult = avgMvMap.at(ctuWindowKey);
+
+    bool isFrac = mvData->fracPosition != 0;
+
+    int xMVBkp = *xMV;
+    int yMVBkp = *yMV;
+
+    totalDecodedMVs ++;
+
+    if(!isFrac)
+        return;
+    
     if(prefFracResult.first == -1)
         return;
 
-    int xMask = prefFracResult.first >> 2;
-    int yMask = prefFracResult.first & 0x3;
+    int yTop = avgMVResult.first;
+    int yBottom = avgMVResult.first + 128;
 
-    //printf("[%d] (%d,%d) -> ",prefFracResult.first , *xMV, *yMV);
+    bool adjustMV = false;    
+    int adjustedYMV = 0;
+    if(mvData->yMV < yTop) {
+        adjustMV = true;
+        adjustedYMV = yTop;
+    }
 
-    (*xMV) = ((*xMV) & 0xFFFFFFFC) | xMask;
-    (*yMV) = ((*yMV) & 0xFFFFFFFC) | yMask;
+    if((mvData->yMV + mvData->hPU) > yBottom) {
+        adjustMV = true;
+        adjustedYMV = yBottom - mvData->hPU;
+    }
 
-    //printf("(%d,%d)\n", *xMV, *yMV);    
+    if(adjustMV) {
+        int yIntegMask = adjustedYMV << 2;
+        (*yMV) = yIntegMask;
+    }
+
+    // Adjusting frac position to the prefFrac of the current CTU Window
+    int xFracMask = prefFracResult.first >> 2;
+    int yFracMask = prefFracResult.first & 0x3;
+
+    (*xMV) = ((*xMV) & 0xFFFFFFFC) | xFracMask;
+    (*yMV) = (*yMV) | yFracMask;
+
+    if(*xMV != xMVBkp || *yMV != yMVBkp)
+        countAdjustedMVs ++;
+}
+
+void DecodeOptimizer::logDecoderOptSummary() {
+    double adjustedMvsPercent = (countAdjustedMVs * 1.0) / totalDecodedMVs;
+        
+    printf("\n Decoder Optimization Summary:\n %.2f - %llu/%llu\n\n", adjustedMvsPercent, countAdjustedMVs, totalDecodedMVs);
 }

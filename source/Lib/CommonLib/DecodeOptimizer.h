@@ -30,6 +30,9 @@ class DecodeOptimizer {
         static std::map<std::string, std::pair<int, double> > prefFracMap;
         static std::map<std::string, std::pair<int, double> > avgMvMap;
 
+        static long long int countAdjustedMVs;
+        static long long int totalDecodedMVs;
+
     public:
         static void openMvsFile(std::string fileName);
         static std::string generateMvLogMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
@@ -38,5 +41,6 @@ class DecodeOptimizer {
         static std::pair<int, int> restoreMv(int xMV, int yMV, int fracPosition);
         static std::pair<int, double> calculatePrefFrac(std::list<MvLogData*> list);
         static std::pair<int, double> calculateAvgMV(std::list<MvLogData*> list);
-        static void modifyMV(int currFramePoc, PosType yPU, int refList, int* xMV, int* yMV);
+        static void modifyMV(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc, int* xMV, int* yMV);
+        static void logDecoderOptSummary();
 };

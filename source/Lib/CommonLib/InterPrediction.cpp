@@ -1410,12 +1410,12 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
 
   if(!pu.cu->affine) {
     int currFramePoc = pu.cu->slice->getPOC();
-    //PosType xPU = pu.lx(); 
+    PosType xPU = pu.lx(); 
     PosType yPU = pu.ly();
 
     if(pu.refIdx[REF_PIC_LIST_0] >= 0) {
       int refList = 0;
-      //int refFramePoc = pu.cu->slice->getRefPic( REF_PIC_LIST_0, pu.refIdx[REF_PIC_LIST_0] )->getPOC();
+      int refFramePoc = pu.cu->slice->getRefPic( REF_PIC_LIST_0, pu.refIdx[REF_PIC_LIST_0] )->getPOC();
       int xMV = pu.mv[REF_PIC_LIST_0].getHor();
       int yMV = pu.mv[REF_PIC_LIST_0].getVer();
 
@@ -1426,14 +1426,14 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
       CHECK(xMV != logMV.first, "[DecOpt] Motion vectors x coordinates are different.");
       CHECK(yMV != logMV.second, "[DecOpt] Motion vectors y coordinates are different.");*/
 
-      DecodeOptimizer::modifyMV(currFramePoc, yPU, refList, &xMV, &yMV);  
+      DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, refList, refFramePoc, &xMV, &yMV);  
       pu.mv[REF_PIC_LIST_0].setHor(xMV);   
       pu.mv[REF_PIC_LIST_0].setVer(yMV);
 
     }
     if(pu.refIdx[REF_PIC_LIST_1] >= 0) {
       int refList = 1;
-      //int refFramePoc = pu.cu->slice->getRefPic( REF_PIC_LIST_1, pu.refIdx[REF_PIC_LIST_1] )->getPOC();
+      int refFramePoc = pu.cu->slice->getRefPic( REF_PIC_LIST_1, pu.refIdx[REF_PIC_LIST_1] )->getPOC();
       int xMV = pu.mv[REF_PIC_LIST_1].getHor();
       int yMV = pu.mv[REF_PIC_LIST_1].getVer();
 
@@ -1444,7 +1444,7 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
       CHECK(xMV != logMV.first, "[DecOpt] Motion vectors x coordinates are different.");
       CHECK(yMV != logMV.second, "[DecOpt] Motion vectors y coordinates are different.");  */
 
-      DecodeOptimizer::modifyMV(currFramePoc, yPU, refList, &xMV, &yMV);  
+      DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, refList, refFramePoc, &xMV, &yMV);  
       pu.mv[REF_PIC_LIST_1].setHor(xMV);   
       pu.mv[REF_PIC_LIST_1].setVer(yMV);
     }
