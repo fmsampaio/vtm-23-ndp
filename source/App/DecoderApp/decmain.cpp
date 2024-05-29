@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
     return returnCode;
   }
 
-  DecodeOptimizer::openMvsFile("/home/felipe/Projetos/ndp-repos/outputs/mvlogs/vectors.log");
+  DecodeOptimizer::openMvsFile(pcDecApp->mvsFileName);
 
   // starting time
   double dResult;

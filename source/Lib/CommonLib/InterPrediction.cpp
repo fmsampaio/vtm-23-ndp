@@ -1412,6 +1412,7 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
     int currFramePoc = pu.cu->slice->getPOC();
     PosType xPU = pu.lx(); 
     PosType yPU = pu.ly();
+    SizeType hPU = pu.lheight();
 
     if(pu.refIdx[REF_PIC_LIST_0] >= 0) {
       int refList = 0;
@@ -1426,7 +1427,7 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
       CHECK(xMV != logMV.first, "[DecOpt] Motion vectors x coordinates are different.");
       CHECK(yMV != logMV.second, "[DecOpt] Motion vectors y coordinates are different.");*/
 
-      DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, refList, refFramePoc, &xMV, &yMV);  
+      DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, hPU, refList, refFramePoc, &xMV, &yMV);  
       pu.mv[REF_PIC_LIST_0].setHor(xMV);   
       pu.mv[REF_PIC_LIST_0].setVer(yMV);
 
@@ -1444,7 +1445,7 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
       CHECK(xMV != logMV.first, "[DecOpt] Motion vectors x coordinates are different.");
       CHECK(yMV != logMV.second, "[DecOpt] Motion vectors y coordinates are different.");  */
 
-      DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, refList, refFramePoc, &xMV, &yMV);  
+      DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, hPU, refList, refFramePoc, &xMV, &yMV);  
       pu.mv[REF_PIC_LIST_1].setHor(xMV);   
       pu.mv[REF_PIC_LIST_1].setVer(yMV);
     }
