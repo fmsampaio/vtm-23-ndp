@@ -42,6 +42,7 @@
 #include "program_options_lite.h"
 
 #include "CommonLib/DecodeOptimizer.h"
+#include "CommonLib/DecMVsLogger.h"
 
 //! \ingroup DecoderApp
 //! \{
@@ -53,6 +54,8 @@
 int main(int argc, char* argv[])
 {
   int returnCode = EXIT_SUCCESS;
+
+  DecMVsLogger::init();
 
   // print information
   fprintf( stdout, "\n" );
@@ -121,6 +124,8 @@ int main(int argc, char* argv[])
   DecodeOptimizer::logDecoderOptSummary();
 
   delete pcDecApp;
+
+  DecMVsLogger::close();
 
   return returnCode;
 }

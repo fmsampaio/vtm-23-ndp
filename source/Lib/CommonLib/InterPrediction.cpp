@@ -45,6 +45,8 @@
 #include <algorithm>
 
 #include "DecodeOptimizer.h"
+#include "DecMVsLogger.h"
+
 
 //! \ingroup CommonLib
 //! \{
@@ -1408,11 +1410,12 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
   // Therefore for 4:0:0, "chroma" is not changed to false.
   CHECK(predBufWOBIO && pu.ciipFlag, "the case should not happen!");
 
-  if(!pu.cu->affine) {
-    int currFramePoc = pu.cu->slice->getPOC();
+  if(DecMVsLogger::isDecoding() && !pu.cu->affine) {
     PosType xPU = pu.lx(); 
     PosType yPU = pu.ly();
+    SizeType wPU = pu.lwidth();
     SizeType hPU = pu.lheight();
+    int currFramePoc = pu.cu->slice->getPOC();
 
     if(pu.refIdx[REF_PIC_LIST_0] >= 0) {
       int refList = 0;
@@ -1431,6 +1434,8 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
       pu.mv[REF_PIC_LIST_0].setHor(xMV);   
       pu.mv[REF_PIC_LIST_0].setVer(yMV);
 
+      DecMVsLogger::logMotionVector(currFramePoc, xPU, yPU, wPU, hPU, refList, refFramePoc, xMV, yMV);
+
     }
     if(pu.refIdx[REF_PIC_LIST_1] >= 0) {
       int refList = 1;
@@ -1448,6 +1453,8 @@ void InterPrediction::motionCompensation(PredictionUnit &pu, PelUnitBuf &predBuf
       DecodeOptimizer::modifyMV(currFramePoc, xPU, yPU, hPU, refList, refFramePoc, &xMV, &yMV);  
       pu.mv[REF_PIC_LIST_1].setHor(xMV);   
       pu.mv[REF_PIC_LIST_1].setVer(yMV);
+
+      DecMVsLogger::logMotionVector(currFramePoc, xPU, yPU, wPU, hPU, refList, refFramePoc, xMV, yMV);
     }
   }
 
