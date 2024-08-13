@@ -132,7 +132,8 @@ bool DecAppCfg::parseCfg( int argc, char* argv[] )
 #if GDR_LEAK_TEST
   ("RandomAccessPos",           m_gdrPocRandomAccess,                  0,          "POC of GDR Random access picture\n")
 #endif // GDR_LEAK_TEST
-  ("MvsFile",    mvsFileName,           std::string(""), "Input MVs file name - for NDP-based VVC decoding optimization.")
+  ("MvsFile",                  mvsFileName,           std::string(""), "Input MVs file name - for NDP-based VVC decoding optimization.")
+  ("FracOnly",                 cfgFracOnly,            0,               "Run only fractional MVs optimized decoding: (0) full-opt (1) frac-only.")
     ;
   // clang-format on
 

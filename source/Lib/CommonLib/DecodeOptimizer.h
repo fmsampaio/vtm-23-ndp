@@ -33,8 +33,11 @@ class DecodeOptimizer {
         static long long int countAdjustedMVs;
         static long long int totalDecodedMVs;
 
+        static bool isFracOnly;
+
     public:
         static void openMvsFile(std::string fileName);
+        static void setOptMode(int cfgFracOnly);
         static std::string generateMvLogMapKey(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);
         static std::string generateKeyPerCTUWindow(int currFramePoc, PosType yPU, int refList);
         static MvLogData* getMvData(int currFramePoc, PosType xPU, PosType yPU, int refList, int refFramePoc);

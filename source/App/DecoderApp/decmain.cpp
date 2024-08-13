@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 
     return returnCode;
   }
-
+  DecodeOptimizer::setOptMode(pcDecApp->cfgFracOnly);
   DecodeOptimizer::openMvsFile(pcDecApp->mvsFileName);
 
   // starting time

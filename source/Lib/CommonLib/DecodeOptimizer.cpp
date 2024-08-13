@@ -1,5 +1,6 @@
 #include "DecodeOptimizer.h"
 
+bool DecodeOptimizer::isFracOnly;
 FILE *DecodeOptimizer::mvsFile, *DecodeOptimizer::optLogFile;
 std::map<std::string, MvLogData*> DecodeOptimizer::mvsDataMap;
 std::map<std::string, std::list<MvLogData*> > DecodeOptimizer::mvsDataMapPerCTUWindow;
@@ -27,8 +28,13 @@ std::string DecodeOptimizer::generateKeyPerCTUWindow(int currFramePoc, PosType y
     return key;
 }
 
+void DecodeOptimizer::setOptMode(int cfgFracOnly) {
+    isFracOnly = cfgFracOnly == 1;
+}
+
 void DecodeOptimizer::openMvsFile(std::string fileName) {
     mvsFile = fopen(fileName.c_str(), "r");
+    
     optLogFile = fopen("decoder-opt.log", "w");
 
     countAdjustedMVs = 0;
@@ -66,8 +72,6 @@ void DecodeOptimizer::openMvsFile(std::string fileName) {
         std::string key = generateMvLogMapKey(currFramePoc, xPU, yPU, refList, refFramePoc);
         mvsDataMap.insert({key, mvData});
 
-        //printf("[I]%s\n", key.c_str());
-
         std::string keyPerWindow = generateKeyPerCTUWindow(currFramePoc, yPU, refList);
         if(mvsDataMapPerCTUWindow.find(keyPerWindow) != mvsDataMapPerCTUWindow.end()) {
             mvsDataMapPerCTUWindow.at(keyPerWindow).push_back(mvData);
@@ -79,23 +83,36 @@ void DecodeOptimizer::openMvsFile(std::string fileName) {
         }
     }
 
-    fprintf(optLogFile, "ctu-window-id;cus-count;avg-mv;pref-frac;avg-mv-hit;pref-frac-hit\n");
+    fprintf(optLogFile, "ctu-window-id;cus-count;pref-frac;pref-frac-hit");
+
+    if(!isFracOnly) {
+        fprintf(optLogFile, ";avg-mv;avg-mv-hit");
+    }
+    fprintf(optLogFile, "\n");
+
     for(auto it = mvsDataMapPerCTUWindow.begin(); it != mvsDataMapPerCTUWindow.end(); ++it) {
-        std::pair<int, double> resultPrefFrac = calculatePrefFrac(it->second);
-        prefFracMap.insert({it->first, resultPrefFrac});
-
-        std::pair<int, double> resultAvgMV = calculateAvgMV(it->second);
-        avgMvMap.insert({it->first, resultAvgMV});
-
-        int prefFrac = resultPrefFrac.first;
-        double prefFracHit = resultPrefFrac.second;
-        int avgMv = resultAvgMV.first;
-        double avgMvHit = resultAvgMV.second;
-
         int cusWithinWindow = it->second.size();
         std::string ctuWindowKey = it->first;
 
-        fprintf(optLogFile, "%s;%d;%d;%.3f;%d;%.3f\n", ctuWindowKey.c_str(), cusWithinWindow, avgMv, avgMvHit, prefFrac, prefFracHit);
+        std::pair<int, double> resultPrefFrac = calculatePrefFrac(it->second);
+        prefFracMap.insert({it->first, resultPrefFrac});
+
+        int prefFrac = resultPrefFrac.first;
+        double prefFracHit = resultPrefFrac.second;
+
+        fprintf(optLogFile, "%s;%d;%d;%.3f", ctuWindowKey.c_str(), cusWithinWindow, prefFrac, prefFracHit);
+
+        if(!isFracOnly) {
+            std::pair<int, double> resultAvgMV = calculateAvgMV(it->second);
+            avgMvMap.insert({it->first, resultAvgMV});
+            int avgMv = resultAvgMV.first;
+            double avgMvHit = resultAvgMV.second;
+
+            fprintf(optLogFile, ";%d;%.3f", avgMv, avgMvHit);
+        }
+
+        fprintf(optLogFile, "\n");
+        
     }
 
 }
@@ -192,7 +209,7 @@ std::pair<int, double> DecodeOptimizer::calculateAvgMV(std::list<MvLogData*> lis
     }
 
     if(accumMVsInsideInterpWindow == 0) {
-        return std::pair<int, double>(-1, -1);
+        return std::pair<int, double>(-6666, -1);
     }
     else {
         double percentInsideInterpWindow = (accumMVsInsideInterpWindow * 1.0) / accumFracPUs;
@@ -225,12 +242,19 @@ void DecodeOptimizer::modifyMV(int currFramePoc, PosType xPU, PosType yPU, SizeT
        
     std::string ctuWindowKey = generateKeyPerCTUWindow(currFramePoc, yPU, refList);
 
-    if(prefFracMap.find(ctuWindowKey) == prefFracMap.end() || avgMvMap.find(ctuWindowKey) == avgMvMap.end()) {
+    if(prefFracMap.find(ctuWindowKey) == prefFracMap.end()) {
         return;
     }
 
+    if(!isFracOnly) {
+        if(avgMvMap.find(ctuWindowKey) == avgMvMap.end()) {
+            return;
+        }
+    }
+
     std::pair<int, double> prefFracResult = prefFracMap.at(ctuWindowKey);
-    std::pair<int, double> avgMVResult = avgMvMap.at(ctuWindowKey);
+
+    std::pair<int, double> avgMVResult;
 
     bool isFrac = fracPosition != 0;
 
@@ -239,31 +263,38 @@ void DecodeOptimizer::modifyMV(int currFramePoc, PosType xPU, PosType yPU, SizeT
 
     totalDecodedMVs ++;
     
-    if(prefFracResult.first == -1 || avgMVResult.first == -1 || !isFrac)
+    if(prefFracResult.first == -1 || !isFrac)
         return;
 
-    int yTop = avgMVResult.first;
-    int yBottom = avgMVResult.first + 128;
+    if(!isFracOnly) {
+        avgMVResult = avgMvMap.at(ctuWindowKey);
+        
+        if(avgMVResult.first == -6666) 
+            return;
 
-    bool adjustMV = false;    
-    int adjustedYMV = 0;
+        int yTop = avgMVResult.first;
+        int yBottom = avgMVResult.first + 128;
 
-    if(yMVInteg < yTop) {
-        adjustMV = true;
-        adjustedYMV = yTop;
-    }
-    else {
-        if((yMVInteg + hPU) > yBottom) {
+        bool adjustMV = false;    
+        int adjustedYMV = 0;
+
+        if(yMVInteg < yTop) {
             adjustMV = true;
-            adjustedYMV = yBottom - hPU;
+            adjustedYMV = yTop;
+        }
+        else {
+            if((yMVInteg + hPU) > yBottom) {
+                adjustMV = true;
+                adjustedYMV = yBottom - hPU;
+            }
+        }
+
+        if(adjustMV) {
+            int yIntegMask = adjustedYMV << 2;
+            (*yMV) = yIntegMask;
         }
     }
-
-    if(adjustMV) {
-        int yIntegMask = adjustedYMV << 2;
-        (*yMV) = yIntegMask;
-    }
-
+    
     // Adjusting frac position to the prefFrac of the current CTU Window
     int xFracMask = prefFracResult.first >> 2;
     int yFracMask = prefFracResult.first & 0x3;
