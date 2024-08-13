@@ -79,7 +79,7 @@ void DecodeOptimizer::openMvsFile(std::string fileName) {
         }
     }
 
-    fprintf(optLogFile, "ctu-window-id;avg-mv-hit;pref-frac-hit\n");
+    fprintf(optLogFile, "ctu-window-id;cus-count;avg-mv;pref-frac;avg-mv-hit;pref-frac-hit\n");
     for(auto it = mvsDataMapPerCTUWindow.begin(); it != mvsDataMapPerCTUWindow.end(); ++it) {
         std::pair<int, double> resultPrefFrac = calculatePrefFrac(it->second);
         prefFracMap.insert({it->first, resultPrefFrac});
@@ -87,9 +87,16 @@ void DecodeOptimizer::openMvsFile(std::string fileName) {
         std::pair<int, double> resultAvgMV = calculateAvgMV(it->second);
         avgMvMap.insert({it->first, resultAvgMV});
 
-        fprintf(optLogFile, "%s;%.3f;%.3f\n", it->first.c_str(), resultAvgMV.second, resultPrefFrac.second);
-    }
+        int prefFrac = resultPrefFrac.first;
+        double prefFracHit = resultPrefFrac.second;
+        int avgMv = resultAvgMV.first;
+        double avgMvHit = resultAvgMV.second;
 
+        int cusWithinWindow = it->second.size();
+        std::string ctuWindowKey = it->first;
+
+        fprintf(optLogFile, "%s;%d;%d;%.3f;%d;%.3f\n", ctuWindowKey.c_str(), cusWithinWindow, avgMv, avgMvHit, prefFrac, prefFracHit);
+    }
 
 }
 
@@ -124,7 +131,6 @@ std::pair<int, double> DecodeOptimizer::calculatePrefFrac(std::list<MvLogData*> 
     
    
     for(std::list<MvLogData*>::iterator it = list.begin(); it != list.end(); ++ it) {
-        //countFracPos[(*it)->fracPosition] ++;
         countFracPos[(*it)->fracPosition] += (*it)->wPU * (*it)->hPU;
     }
  
@@ -200,8 +206,14 @@ int DecodeOptimizer::extractIntegAndFrac(int *xCoord, int *yCoord) {
     int yMasked = *(yCoord) & 0x3;
     int fracPosition = (xMasked << 2) | yMasked;
 
+    // for debug
+    // std::cout << *xCoord << " " << *yCoord << " --> ";
+
     *xCoord = *xCoord >> 2;
     *yCoord = *yCoord >> 2;
+
+    // for debug
+    // std::cout << *xCoord << " " << *yCoord << " " << fracPosition << "\n";
 
     return fracPosition;
 }
@@ -240,10 +252,11 @@ void DecodeOptimizer::modifyMV(int currFramePoc, PosType xPU, PosType yPU, SizeT
         adjustMV = true;
         adjustedYMV = yTop;
     }
-
-    if((yMVInteg + hPU) > yBottom) {
-        adjustMV = true;
-        adjustedYMV = yBottom - hPU;
+    else {
+        if((yMVInteg + hPU) > yBottom) {
+            adjustMV = true;
+            adjustedYMV = yBottom - hPU;
+        }
     }
 
     if(adjustMV) {
@@ -256,10 +269,21 @@ void DecodeOptimizer::modifyMV(int currFramePoc, PosType xPU, PosType yPU, SizeT
     int yFracMask = prefFracResult.first & 0x3;
 
     (*xMV) = ((*xMV) & 0xFFFFFFFC) | xFracMask;
-    (*yMV) = (*yMV) | yFracMask;
+    (*yMV) = ((*yMV) & 0xFFFFFFFC) | yFracMask;
 
-    if((*xMV) != xMVBkp || (*yMV) != yMVBkp)
+    if((*xMV) != xMVBkp || (*yMV) != yMVBkp) {
         countAdjustedMVs ++;
+
+        // for debug
+        // int xMasked = *(xMV) & 0x3;
+        // int yMasked = *(yMV) & 0x3;
+        // int fracPositionAdjusted = (xMasked << 2) | yMasked;
+
+        // std::cout << "[" << prefFracResult.first << " x " << fracPosition << " x " << fracPositionAdjusted << "] ";
+        // std::cout << "[" << yTop << "," << yBottom << "] [" << yMVInteg << "," << hPU << " x " << adjustedYMV <<  "] "; 
+        // std::cout << "(" << xMVBkp << "," << yMVBkp << ") -> \t (" << (*xMV) << "," << (*yMV) << ")\n";
+        
+    }
 }
 
 void DecodeOptimizer::logDecoderOptSummary() {
